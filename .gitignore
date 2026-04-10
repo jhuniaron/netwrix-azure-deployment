@@ -1,0 +1,25 @@
+# Terraform local state (never commit — use remote backend)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Terraform plan binary (contains sensitive values in plaintext)
+tfplan
+*.tfplan
+
+# Terraform working directory (downloaded providers — large and reproducible)
+.terraform/
+.terraform.lock.hcl
+
+# Variable override files (may contain sensitive local values)
+*.auto.tfvars
+override.tf
+override.tf.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+*.swp
