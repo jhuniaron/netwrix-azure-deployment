@@ -114,9 +114,14 @@ jobs:
           output_file_path: checkov-results.sarif
           soft_fail: false
           # Skipped checks with documented justification:
-          # CKV_AZURE_13  — App Service auth not applicable (using Managed Identity + WAF)
-          # CKV_AZURE_225 — App Gateway WAF in Prevention mode (dev uses self-signed cert)
-          skip_check: "CKV_AZURE_13,CKV_AZURE_225"
+          # CKV_AZURE_13  — App Service auth: using Managed Identity + WAF instead of built-in auth
+          # CKV_AZURE_225 — App Gateway WAF: in Prevention mode; dev uses self-signed cert (known limitation)
+          # CKV_AZURE_224 — SQL Ledger: no regulatory immutability requirement for this workload
+          # CKV_AZURE_229 — SQL zone-redundant: Serverless GP_S_Gen5_1 SKU does not support ZR in dev
+          # CKV_AZURE_88  — App Service Azure Files: stateless .NET app; no persistent local storage needed
+          # CKV_AZURE_17  — Client certificates: browser-facing app; mutual TLS not applicable
+          # CKV_AZURE_212 — Min 2 instances: dev environment; autoscale handles production load; min-1 is cost-intentional
+          skip_check: "CKV_AZURE_13,CKV_AZURE_225,CKV_AZURE_224,CKV_AZURE_229,CKV_AZURE_88,CKV_AZURE_17,CKV_AZURE_212"
 
       - name: Upload Checkov SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3

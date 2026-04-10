@@ -38,6 +38,11 @@ resource "azurerm_mssql_server_security_alert_policy" "main" {
   resource_group_name = var.resource_group_name
   server_name         = azurerm_mssql_server.main.name
   state               = "Enabled"
+
+  # CKV_AZURE_26 + CKV_AZURE_27: send alerts to the ops email address AND account admins
+  email_addresses         = [var.alert_email]
+  email_account_admins    = true
+  retention_days          = 90
 }
 
 # Private Endpoint — gives SQL Server a private IP inside snet-data

@@ -39,6 +39,7 @@ module "database" {
   sql_admin_password  = var.sql_admin_password
   aad_admin_login     = var.aad_admin_login
   aad_admin_object_id = var.aad_admin_object_id
+  alert_email         = var.alert_email
   tags                = local.tags
 }
 
