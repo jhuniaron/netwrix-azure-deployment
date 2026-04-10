@@ -40,11 +40,12 @@
 
 ## Phase 2 — Terraform Bootstrap
 
-- [ ] Repository folder structure created (`terraform/bootstrap/`, `terraform/environments/dev/`, `terraform/modules/`)
+- [x] Repository folder structure created (`terraform/bootstrap/`, `terraform/environments/dev/`, `terraform/modules/`)
 - [x] `terraform/bootstrap/main.tf` written (storage account for remote state) — **SKIPPED: reusing existing**
 - [x] Bootstrap run manually: `terraform init && terraform apply` — **SKIPPED: reusing existing**
 - [x] Remote state storage account confirmed in Azure portal — `tfstateiaron30` in `terraform-state-rg`, container `tfstate`
-- [ ] `versions.tf` written with provider constraints and `backend "azurerm"` block
+- [x] `versions.tf` written with provider constraints and `backend "azurerm"` block
+- [x] All 6 modules created and validated — `terraform validate` passes with zero errors/warnings
 
 ---
 
