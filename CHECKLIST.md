@@ -12,14 +12,14 @@
 - [x] Terraform ≥ 1.9 installed and verified (`terraform -version`) — v1.14.8
 - [x] .NET 10 SDK installed (`dotnet --version`) — v10.0.201
 - [x] Git and GitHub account configured — v2.53.0 (Jhun Fedelino / jhuniaron.fedelino@gmail.com)
-- [ ] GitHub repository created (public or private)
-- [ ] GitHub Actions enabled on repository
-- [ ] Service Principal created for OIDC (no client secret stored)
-- [ ] Federated credential configured for `main` branch
-- [ ] SP assigned **Contributor** + **User Access Administrator** on target resource group
-- [ ] GitHub Secrets populated (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `TF_STATE_RG`, `TF_STATE_SA`, `SQL_ADMIN_LOGIN`, `SQL_ADMIN_PASSWORD`)
-- [ ] GitHub Variables populated (`AZURE_WEBAPP_NAME`, `AZURE_WEBAPP_HOSTNAME`, `AZURE_RESOURCE_GROUP`)
-- [ ] GitHub Environment `dev-deploy` created with required reviewers (manual approval gate)
+- [x] GitHub repository created (public or private) — `https://github.com/jhuniaron/netwrix-azure-deployment`
+- [x] GitHub Actions enabled on repository
+- [x] Service Principal created for OIDC (no client secret stored) — `sp-netwrix-github-actions` (`e9bba11f-5d1a-4007-adce-0053833ee224`)
+- [x] Federated credential configured for `main` branch
+- [x] SP assigned **Contributor** + **User Access Administrator** on `rg-netwrix-dev`
+- [x] GitHub Secrets populated (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `TF_STATE_RG`, `TF_STATE_SA`, `SQL_ADMIN_LOGIN`, `SQL_ADMIN_PASSWORD`)
+- [x] GitHub Variables populated (`AZURE_WEBAPP_NAME`, `AZURE_WEBAPP_HOSTNAME`, `AZURE_RESOURCE_GROUP`)
+- [x] GitHub Environment `dev-deploy` created with required reviewers (manual approval gate) — reviewer: `jhuniaron`
 
 ---
 
