@@ -16,6 +16,17 @@ tfplan
 override.tf
 override.tf.json
 
+# .NET build outputs (reproducible — never commit)
+bin/
+obj/
+publish/
+*.zip
+*.nupkg
+
+# .NET user-specific files
+*.user
+*.suo
+
 # OS files
 .DS_Store
 Thumbs.db

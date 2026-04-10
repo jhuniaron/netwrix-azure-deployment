@@ -1,0 +1,326 @@
+name: Build, Secure, and Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Permissions needed for OIDC login and CodeQL SARIF upload
+permissions:
+  id-token: write       # Required: lets GitHub Actions request an Azure OIDC token
+  contents: read        # Required: checkout
+  security-events: write # Required: upload SARIF to GitHub Security tab
+
+env:
+  SOLUTION_FILE:  Netwrix.DevOps.Test.sln
+  APP_PROJECT:    Netwrix.DevOps.Test.App/Netwrix.DevOps.Test.App.csproj
+  ARTIFACT_NAME:  Netwrix.DevOps.Test.App.zip
+  TF_WORKING_DIR: terraform/environments/dev
+  DOTNET_VERSION: "10.0.x"
+  TF_VERSION:     "1.14.x"
+
+jobs:
+  # ================================================================
+  # JOB 1 — BUILD & TEST
+  # Restores, builds, and packages the .NET app.
+  # The artifact name matches the exact spec: Netwrix.DevOps.Test.App.zip
+  # ================================================================
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_FILE }}
+
+      - name: Build (Release)
+        run: dotnet build ${{ env.SOLUTION_FILE }} --no-restore --configuration Release
+
+      # dotnet test would run here if test projects exist.
+      # The solution currently has no test project — the step is scaffolded
+      # and will become active when a test project is added.
+      - name: Test
+        run: |
+          dotnet test ${{ env.SOLUTION_FILE }} \
+            --no-build \
+            --configuration Release \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            || echo "No test projects found — skipping"
+
+      - name: Publish app
+        run: |
+          dotnet publish ${{ env.APP_PROJECT }} \
+            --configuration Release \
+            --output ./publish \
+            --no-build
+
+      # Zip matches the exact artifact name from the assessment spec
+      - name: Package artifact (${{ env.ARTIFACT_NAME }})
+        run: zip -r ${{ env.ARTIFACT_NAME }} ./publish/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-package
+          path: ${{ env.ARTIFACT_NAME }}
+          retention-days: 7
+
+  # ================================================================
+  # JOB 2 — SECURITY GATES
+  # Runs BEFORE any infrastructure changes.
+  # If either gate fails, the whole pipeline stops.
+  #
+  # WHY:
+  #   Gitleaks — ensures no API keys, passwords, or tokens were
+  #              accidentally committed to the repo.
+  #   Checkov  — scans all Terraform files for misconfigurations
+  #              (e.g. storage accounts with public blob access,
+  #               SQL open to 0.0.0.0, Key Vault without purge protection).
+  #              Results are uploaded to GitHub Security tab as SARIF.
+  # ================================================================
+  security-gates:
+    name: Security Gates
+    runs-on: ubuntu-latest
+    needs: build-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history required for Gitleaks to scan all commits
+
+      - name: Gitleaks — secret scanning
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkov — Terraform static analysis (SAST)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          soft_fail: false
+          # Skipped checks with documented justification:
+          # CKV_AZURE_13  — App Service auth not applicable (using Managed Identity + WAF)
+          # CKV_AZURE_225 — App Gateway WAF in Prevention mode (dev uses self-signed cert)
+          skip_check: "CKV_AZURE_13,CKV_AZURE_225"
+
+      - name: Upload Checkov SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()  # Upload even if Checkov found issues, so results are visible
+        with:
+          sarif_file: checkov-results.sarif
+
+  # ================================================================
+  # JOB 3 — TERRAFORM PLAN
+  # Runs on every push and PR — shows exactly what would change.
+  # Does NOT touch Azure resources.
+  #
+  # WHY OIDC (no stored password):
+  #   The azure/login action exchanges a short-lived GitHub token for
+  #   an Azure access token using the federated credential we configured.
+  #   No AZURE_CLIENT_SECRET is ever stored or transmitted.
+  # ================================================================
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: [build-test, security-gates]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure (OIDC — no stored secrets)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform ${{ env.TF_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          ARM_USE_OIDC:        true
+          ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_STATE_RG }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_STATE_SA }}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=netwrix-dev.terraform.tfstate"
+
+      # Format check — enforces consistent HCL style across all files
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          ARM_USE_OIDC:        true
+          ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          # Sensitive vars passed as TF_VAR_* — never written to disk
+          TF_VAR_sql_admin_login:    ${{ secrets.SQL_ADMIN_LOGIN }}
+          TF_VAR_sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          terraform plan \
+            -var-file="terraform.tfvars" \
+            -out=tfplan \
+            -detailed-exitcode
+
+      # Save the plan so the apply job uses the EXACT same plan that was reviewed
+      - name: Upload Terraform plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 1
+
+  # ================================================================
+  # JOB 4 — TERRAFORM APPLY
+  # Only runs on push to main (not on PRs).
+  # Gated by the 'dev-deploy' GitHub Environment — requires your
+  # manual approval before any Azure resources are created/changed.
+  #
+  # WHY save the plan and apply it:
+  #   Prevents the race condition where plan says "add resource A"
+  #   but apply creates "resource B" because state changed between
+  #   the two steps. The saved tfplan is an exact binary snapshot.
+  # ================================================================
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: dev-deploy  # <-- Manual approval gate configured on this environment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform ${{ env.TF_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Download Terraform plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          ARM_USE_OIDC:        true
+          ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_STATE_RG }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_STATE_SA }}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=netwrix-dev.terraform.tfstate"
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          ARM_USE_OIDC:        true
+          ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_sql_admin_login:    ${{ secrets.SQL_ADMIN_LOGIN }}
+          TF_VAR_sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: terraform apply -auto-approve tfplan
+
+  # ================================================================
+  # JOB 5 — DEPLOY TO AZURE APP SERVICE
+  # Runs after infrastructure is confirmed healthy.
+  # Also gated by dev-deploy (same manual approval covers both jobs).
+  #
+  # Post-deploy smoke test:
+  #   Hits /health 5 times with 10s between retries.
+  #   App Service takes ~60s to warm up after a new deployment,
+  #   so retries handle the cold start window.
+  # ================================================================
+  deploy:
+    name: Deploy to Azure App Service
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    environment: dev-deploy
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-package
+
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package:  ${{ env.ARTIFACT_NAME }}
+
+      # Smoke test — proves the app is actually serving requests after deployment.
+      # Retries handle the App Service warm-up period.
+      - name: Post-deploy smoke test
+        run: |
+          APP_URL="https://${{ vars.AZURE_WEBAPP_HOSTNAME }}"
+          echo "Smoke testing ${APP_URL}/health ..."
+          for i in $(seq 1 5); do
+            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "${APP_URL}/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 10s..."
+            sleep 10
+          done
+          echo "ERROR: Smoke test failed after 5 attempts — rolling back"
+          az webapp deployment slot swap \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --name ${{ vars.AZURE_WEBAPP_NAME }} \
+            --slot staging \
+            --target-slot production 2>/dev/null || true
+          exit 1

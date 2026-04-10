@@ -51,113 +51,113 @@
 
 ## Phase 3 — Terraform Networking Module
 
-- [ ] Module created at `terraform/modules/networking/`
-- [ ] `main.tf` provisions:
-  - [ ] Resource Group
-  - [ ] Virtual Network (`10.0.0.0/16`)
-  - [ ] `snet-gateway` subnet (`10.0.0.0/26`) — App Gateway
-  - [ ] `snet-app` subnet (`10.0.1.0/24`) with App Service delegation
-  - [ ] `snet-data` subnet (`10.0.2.0/28`) for SQL Private Endpoint
-  - [ ] `snet-pe` subnet (`10.0.3.0/28`) for Key Vault Private Endpoint
-  - [ ] NSG for gateway subnet (443, 80, 65200-65535 inbound)
-  - [ ] Private DNS Zone for `privatelink.database.windows.net`
-  - [ ] Private DNS Zone for `privatelink.vaultcore.azure.net`
-  - [ ] VNet links for both DNS zones
-- [ ] `variables.tf` and `outputs.tf` complete
-- [ ] `terraform validate` passes
+- [x] Module created at `terraform/modules/networking/`
+- [x] `main.tf` provisions:
+  - [x] Resource Group
+  - [x] Virtual Network (`10.0.0.0/16`)
+  - [x] `snet-gateway` subnet (`10.0.0.0/26`) — App Gateway
+  - [x] `snet-app` subnet (`10.0.1.0/24`) with App Service delegation
+  - [x] `snet-data` subnet (`10.0.2.0/28`) for SQL Private Endpoint
+  - [x] `snet-pe` subnet (`10.0.3.0/28`) for Key Vault Private Endpoint
+  - [x] NSG for gateway subnet (443, 80, 65200-65535 inbound)
+  - [x] Private DNS Zone for `privatelink.database.windows.net`
+  - [x] Private DNS Zone for `privatelink.vaultcore.azure.net`
+  - [x] VNet links for both DNS zones
+- [x] `variables.tf` and `outputs.tf` complete
+- [x] `terraform validate` passes
 
 ---
 
 ## Phase 4 — Terraform App Service Module
 
-- [ ] Module created at `terraform/modules/app_service/`
-- [ ] `main.tf` provisions:
-  - [ ] App Service Plan (Linux, P1v3)
-  - [ ] Linux Web App (dotnet 10.0)
-  - [ ] VNet Integration enabled (outbound via `snet-app`)
-  - [ ] `https_only = true`, FTPS disabled, TLS 1.2 minimum
-  - [ ] System-Assigned Managed Identity enabled
-  - [ ] App Settings referencing Key Vault secrets (`@Microsoft.KeyVault(...)`)
-  - [ ] IP restriction: only `snet-gateway` CIDR allowed inbound
-  - [ ] Autoscale policy (scale out at 70% CPU, scale in at 30%)
-- [ ] `variables.tf` and `outputs.tf` complete
-- [ ] `terraform validate` passes
+- [x] Module created at `terraform/modules/app_service/`
+- [x] `main.tf` provisions:
+  - [x] App Service Plan (Linux, P1v3)
+  - [x] Linux Web App (dotnet 10.0)
+  - [x] VNet Integration enabled (outbound via `snet-app`)
+  - [x] `https_only = true`, FTPS disabled, TLS 1.2 minimum
+  - [x] System-Assigned Managed Identity enabled
+  - [x] App Settings referencing Key Vault secrets (`@Microsoft.KeyVault(...)`)
+  - [x] IP restriction: only `snet-gateway` CIDR allowed inbound
+  - [x] Autoscale policy (scale out at 70% CPU, scale in at 30%)
+- [x] `variables.tf` and `outputs.tf` complete
+- [x] `terraform validate` passes
 
 ---
 
 ## Phase 5 — Terraform Database Module
 
-- [ ] Module created at `terraform/modules/database/`
-- [ ] `main.tf` provisions:
-  - [ ] Azure SQL Server (public access disabled, TLS 1.2 min)
-  - [ ] Azure AD administrator configured
-  - [ ] Azure SQL Database (GP_S_Gen5_1 Serverless)
-  - [ ] Defender for SQL (security alert policy + vulnerability assessment)
-  - [ ] Private Endpoint in `snet-data`
-  - [ ] Private DNS zone group attached to private endpoint
-- [ ] `variables.tf` and `outputs.tf` complete
-- [ ] `terraform validate` passes
+- [x] Module created at `terraform/modules/database/`
+- [x] `main.tf` provisions:
+  - [x] Azure SQL Server (public access disabled, TLS 1.2 min)
+  - [x] Azure AD administrator configured
+  - [x] Azure SQL Database (GP_S_Gen5_1 Serverless)
+  - [x] Defender for SQL (security alert policy + vulnerability assessment)
+  - [x] Private Endpoint in `snet-data`
+  - [x] Private DNS zone group attached to private endpoint
+- [x] `variables.tf` and `outputs.tf` complete
+- [x] `terraform validate` passes
 
 ---
 
 ## Phase 6 — Terraform WAF / Application Gateway Module
 
-- [ ] Module created at `terraform/modules/waf/`
-- [ ] `main.tf` provisions:
-  - [ ] Standard Public IP (Static)
-  - [ ] WAF Policy (OWASP CRS 3.2, Prevention mode, Bot Manager rules)
-  - [ ] Custom WAF rule blocking known scanner User-Agents
-  - [ ] Application Gateway WAF_v2 with autoscale (min 1, max 10)
-  - [ ] HTTPS listener with SSL certificate from Key Vault
-  - [ ] HTTP → HTTPS redirect rule
-  - [ ] Backend pool targeting App Service hostname
-  - [ ] Custom health probe (`/health`, HTTPS)
-  - [ ] Backend HTTP settings (host header preservation)
-- [ ] `variables.tf` and `outputs.tf` complete
-- [ ] `terraform validate` passes
+- [x] Module created at `terraform/modules/waf/`
+- [x] `main.tf` provisions:
+  - [x] Standard Public IP (Static)
+  - [x] WAF Policy (OWASP CRS 3.2, Prevention mode, Bot Manager rules)
+  - [x] Custom WAF rule blocking known scanner User-Agents
+  - [x] Application Gateway WAF_v2 with autoscale (min 1, max 10)
+  - [x] HTTPS listener with self-signed cert (dev) — Key Vault cert for prod
+  - [x] HTTP → HTTPS redirect rule
+  - [x] Backend pool targeting App Service hostname
+  - [x] Custom health probe (`/health`, HTTPS)
+  - [x] Backend HTTP settings (host header preservation)
+- [x] `variables.tf` and `outputs.tf` complete
+- [x] `terraform validate` passes
 
 ---
 
 ## Phase 7 — Terraform Key Vault Module
 
-- [ ] Module created at `terraform/modules/key_vault/`
-- [ ] `main.tf` provisions:
-  - [ ] Key Vault (RBAC mode, purge protection enabled, public access denied)
-  - [ ] RBAC assignment: App Service MI → **Key Vault Secrets User**
-  - [ ] RBAC assignment: Terraform SP → **Key Vault Secrets Officer**
-  - [ ] Secret: `db-connection-string`
-  - [ ] Secret: `appinsights-connection-string`
-  - [ ] Private Endpoint in `snet-pe`
-  - [ ] Private DNS zone group attached to private endpoint
-- [ ] `variables.tf` and `outputs.tf` complete
-- [ ] `terraform validate` passes
+- [x] Module created at `terraform/modules/key_vault/`
+- [x] `main.tf` provisions:
+  - [x] Key Vault (RBAC mode, purge protection enabled, public access denied)
+  - [x] RBAC assignment: App Service MI → **Key Vault Secrets User**
+  - [x] RBAC assignment: Terraform SP → **Key Vault Secrets Officer**
+  - [x] Secret: `db-connection-string`
+  - [x] Secret: `appinsights-connection-string`
+  - [x] Private Endpoint in `snet-pe`
+  - [x] Private DNS zone group attached to private endpoint
+- [x] `variables.tf` and `outputs.tf` complete
+- [x] `terraform validate` passes
 
 ---
 
 ## Phase 8 — Terraform Monitoring Module
 
-- [ ] Module created at `terraform/modules/monitoring/`
-- [ ] `main.tf` provisions:
-  - [ ] Log Analytics Workspace (90-day retention)
-  - [ ] Application Insights (workspace-based, web type)
-  - [ ] Diagnostic setting: App Gateway → Log Analytics
-  - [ ] Diagnostic setting: App Service → Log Analytics
-  - [ ] Metric alert: HTTP 5xx > 10 in 5 minutes
-  - [ ] Action Group with email notification
-- [ ] `variables.tf` and `outputs.tf` complete
-- [ ] `terraform validate` passes
+- [x] Module created at `terraform/modules/monitoring/`
+- [x] `main.tf` provisions:
+  - [x] Log Analytics Workspace (90-day retention)
+  - [x] Application Insights (workspace-based, web type)
+  - [x] Diagnostic setting: App Gateway → Log Analytics
+  - [x] Diagnostic setting: App Service → Log Analytics
+  - [x] Metric alert: HTTP 5xx > 10 in 5 minutes
+  - [x] Action Group with email notification
+- [x] `variables.tf` and `outputs.tf` complete
+- [x] `terraform validate` passes
 
 ---
 
 ## Phase 9 — Root Environment Composition
 
-- [ ] `terraform/environments/dev/main.tf` written, composing all 6 modules
-- [ ] `terraform/environments/dev/variables.tf` complete
-- [ ] `terraform/environments/dev/outputs.tf` exposes key values (app hostname, public IP)
-- [ ] `terraform/environments/dev/terraform.tfvars` populated (non-sensitive values only)
-- [ ] Full `terraform plan` runs without errors
-- [ ] Full `terraform apply` completes successfully
-- [ ] All resources visible and healthy in Azure portal
+- [x] `terraform/environments/dev/main.tf` written, composing all 6 modules
+- [x] `terraform/environments/dev/variables.tf` complete
+- [x] `terraform/environments/dev/outputs.tf` exposes key values (app hostname, public IP)
+- [x] `terraform/environments/dev/terraform.tfvars` populated (non-sensitive values only)
+- [ ] Full `terraform plan` runs without errors — pending pipeline
+- [ ] Full `terraform apply` completes successfully — pending pipeline
+- [ ] All resources visible and healthy in Azure portal — pending pipeline
 
 ---
 
