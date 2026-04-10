@@ -25,16 +25,16 @@
 
 ## Phase 1 — Architecture Document
 
-- [ ] Document written covering all six sections:
-  - [ ] Azure services chosen and why
-  - [ ] Traffic flow description (or diagram)
-  - [ ] Network boundaries (subnets, NSG rules)
-  - [ ] Identity model (OIDC, Managed Identity, RBAC)
-  - [ ] Key security controls listed
-  - [ ] Scalability approach described
-  - [ ] What's missing and what comes next
-- [ ] Document is 1–2 pages, concise and presentation-ready
-- [ ] Architecture diagram created (Mermaid, Draw.io, or equivalent)
+- [x] Document written covering all six sections:
+  - [x] Azure services chosen and why
+  - [x] Traffic flow description (or diagram)
+  - [x] Network boundaries (subnets, NSG rules)
+  - [x] Identity model (OIDC, Managed Identity, RBAC)
+  - [x] Key security controls listed
+  - [x] Scalability approach described
+  - [x] What's missing and what comes next
+- [x] Document is 1–2 pages, concise and presentation-ready — `ARCHITECTURE.md`
+- [x] Architecture diagram created (ASCII traffic flow diagram in ARCHITECTURE.md)
 
 ---
 
