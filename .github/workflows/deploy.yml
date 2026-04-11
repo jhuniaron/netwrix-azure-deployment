@@ -66,8 +66,9 @@ jobs:
             --no-build
 
       # Zip matches the exact artifact name from the assessment spec
+      # cd into publish first so files sit at zip root (not nested under publish/)
       - name: Package artifact (${{ env.ARTIFACT_NAME }})
-        run: zip -r ${{ env.ARTIFACT_NAME }} ./publish/
+        run: cd ./publish && zip -r ../${{ env.ARTIFACT_NAME }} .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
