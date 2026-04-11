@@ -37,6 +37,11 @@ variable "appinsights_connection_string" {
   sensitive   = true
 }
 
+variable "appgw_identity_principal_id" {
+  description = "Principal ID of the Application Gateway user-assigned managed identity"
+  type        = string
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

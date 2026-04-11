@@ -75,6 +75,12 @@ resource "azurerm_application_gateway" "main" {
   firewall_policy_id  = azurerm_web_application_firewall_policy.main.id
   tags                = var.tags
 
+  # User-assigned managed identity lets App Gateway pull the TLS cert from Key Vault
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [var.appgw_identity_id]
+  }
+
   sku {
     name = "WAF_v2"
     tier = "WAF_v2"
@@ -150,11 +156,11 @@ resource "azurerm_application_gateway" "main" {
     }
   }
 
-  # Dev: use App Gateway's built-in self-signed cert (no real domain needed)
+  # TLS certificate is a self-signed cert generated in Key Vault (dev)
+  # App Gateway reads it at deploy time using its managed identity
   ssl_certificate {
-    name = "self-signed-dev"
-    # Empty data = App Gateway generates its own self-signed cert
-    # For production: reference a Key Vault certificate instead
+    name                = "appgw-tls-dev"
+    key_vault_secret_id = var.appgw_cert_secret_id
   }
 
   # HTTPS listener — where real traffic enters
@@ -163,7 +169,7 @@ resource "azurerm_application_gateway" "main" {
     frontend_ip_configuration_name = local.frontend_ip_name
     frontend_port_name             = local.port_https
     protocol                       = "Https"
-    ssl_certificate_name           = "self-signed-dev"
+    ssl_certificate_name           = "appgw-tls-dev"
   }
 
   # HTTP listener — only exists to redirect to HTTPS

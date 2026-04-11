@@ -20,6 +20,16 @@ variable "app_service_hostname" {
   type        = string
 }
 
+variable "appgw_identity_id" {
+  description = "Resource ID of the user-assigned managed identity for App Gateway (for Key Vault cert access)"
+  type        = string
+}
+
+variable "appgw_cert_secret_id" {
+  description = "Versionless secret ID of the TLS certificate stored in Key Vault"
+  type        = string
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

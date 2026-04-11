@@ -80,6 +80,7 @@ module "key_vault" {
   keyvault_dns_zone_id          = module.networking.keyvault_dns_zone_id
   app_service_principal_id      = module.app_service.principal_id
   appinsights_connection_string = module.monitoring.app_insights_connection_string
+  appgw_identity_principal_id   = azurerm_user_assigned_identity.appgw.principal_id
 
   # Passwordless connection string — App Service MI authenticates via AAD
   db_connection_string = "Server=tcp:${module.database.sql_server_fqdn},1433;Initial Catalog=${module.database.sql_database_name};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
@@ -89,7 +90,20 @@ module "key_vault" {
 # ---------------------------------------------------------------
 # 5. WAF — Application Gateway + WAF Policy
 # Needs the App Service hostname to route backend traffic.
+# The App Gateway uses a user-assigned managed identity to pull its
+# TLS certificate from Key Vault at deploy time.
 # ---------------------------------------------------------------
+
+# User-assigned managed identity for App Gateway (to read the TLS cert from Key Vault)
+# Created here (not in the waf module) to avoid a circular module dependency:
+#   waf → cert_secret_id (from key_vault) AND key_vault → identity_principal_id (from waf)
+resource "azurerm_user_assigned_identity" "appgw" {
+  name                = "id-appgw-${local.name_prefix}"
+  location            = module.networking.location
+  resource_group_name = module.networking.resource_group_name
+  tags                = local.tags
+}
+
 module "waf" {
   source               = "../../modules/waf"
   name_prefix          = local.name_prefix
@@ -97,6 +111,8 @@ module "waf" {
   resource_group_name  = module.networking.resource_group_name
   gateway_subnet_id    = module.networking.gateway_subnet_id
   app_service_hostname = module.app_service.default_hostname
+  appgw_identity_id    = azurerm_user_assigned_identity.appgw.id
+  appgw_cert_secret_id = module.key_vault.appgw_cert_secret_id
   tags                 = local.tags
 }
 

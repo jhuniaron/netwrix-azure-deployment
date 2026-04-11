@@ -38,6 +38,71 @@ resource "azurerm_role_assignment" "terraform_kv_officer" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+# Terraform SP → can CREATE/UPDATE certificates during deployment
+resource "azurerm_role_assignment" "terraform_kv_cert_officer" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Certificates Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+# App Gateway managed identity → can READ the TLS certificate secret
+resource "azurerm_role_assignment" "appgw_kv_secrets_user" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = var.appgw_identity_principal_id
+}
+
+# Self-signed TLS certificate for Application Gateway (dev only)
+# Production should replace this with a CA-signed cert or an ACMEv2 cert
+resource "azurerm_key_vault_certificate" "appgw_tls" {
+  name         = "appgw-tls-dev"
+  key_vault_id = azurerm_key_vault.main.id
+
+  certificate_policy {
+    issuer_parameters {
+      name = "Self"
+    }
+    key_properties {
+      exportable = true
+      key_size   = 2048
+      key_type   = "RSA"
+      reuse_key  = true
+    }
+    lifetime_action {
+      action {
+        action_type = "AutoRenew"
+      }
+      trigger {
+        days_before_expiry = 30
+      }
+    }
+    secret_properties {
+      content_type = "application/x-pkcs12"
+    }
+    x509_certificate_properties {
+      key_usage = [
+        "cRLSign",
+        "dataEncipherment",
+        "digitalSignature",
+        "keyAgreement",
+        "keyCertSign",
+        "keyEncipherment",
+      ]
+      subject            = "CN=netwrix-dev.local"
+      validity_in_months = 12
+    }
+  }
+
+  # Wait for both role assignments before creating the cert so that:
+  # 1. The TF SP has rights to issue the certificate
+  # 2. The App Gateway identity has rights to read the resulting secret
+  #    (ensuring the role is in place before App GW is created)
+  depends_on = [
+    azurerm_role_assignment.terraform_kv_cert_officer,
+    azurerm_role_assignment.appgw_kv_secrets_user,
+  ]
+}
+
 # Store the database connection string as a secret
 # The App Service references this via @Microsoft.KeyVault(...) in App Settings
 resource "azurerm_key_vault_secret" "db_connection_string" {

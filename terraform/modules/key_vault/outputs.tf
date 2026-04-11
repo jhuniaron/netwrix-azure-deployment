@@ -8,6 +8,11 @@ output "key_vault_uri" {
   value       = azurerm_key_vault.main.vault_uri
 }
 
+output "appgw_cert_secret_id" {
+  description = "Versionless secret ID of the App Gateway TLS certificate in Key Vault"
+  value       = azurerm_key_vault_certificate.appgw_tls.versionless_secret_id
+}
+
 output "db_connstring_secret_uri" {
   description = "Versionless URI of the db-connection-string secret (used in App Service Key Vault Reference)"
   value       = azurerm_key_vault_secret.db_connection_string.versionless_id
