@@ -80,6 +80,12 @@ resource "azurerm_application_gateway" "main" {
     tier = "WAF_v2"
   }
 
+  # CKV_AZURE_218: enforce TLS 1.2+ on all HTTPS listeners
+  ssl_policy {
+    policy_type = "Predefined"
+    policy_name = "AppGwSslPolicy20220101"
+  }
+
   # WAF_v2 autoscales capacity units — no manual sizing needed
   autoscale_configuration {
     min_capacity = 1

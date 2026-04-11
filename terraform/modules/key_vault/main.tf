@@ -7,11 +7,13 @@ resource "azurerm_key_vault" "main" {
   location                   = var.location
   resource_group_name        = var.resource_group_name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  rbac_authorization_enabled  = true   # Modern RBAC model — no legacy access policies
-  soft_delete_retention_days = 90     # Deleted secrets recoverable for 90 days
-  purge_protection_enabled   = true   # Prevents permanent deletion even by admins
-  tags                       = var.tags
+  sku_name                       = "standard"
+  rbac_authorization_enabled     = true   # Modern RBAC model — no legacy access policies
+  soft_delete_retention_days     = 90     # Deleted secrets recoverable for 90 days
+  purge_protection_enabled       = true   # Prevents permanent deletion even by admins
+  # CKV_AZURE_189: explicitly disable public access even though network_acls default=Deny
+  public_network_access_enabled  = false
+  tags                           = var.tags
 
   network_acls {
     default_action = "Deny"           # Block all public traffic

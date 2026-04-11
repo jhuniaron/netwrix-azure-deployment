@@ -113,6 +113,119 @@ resource "azurerm_subnet_network_security_group_association" "gateway" {
 }
 
 # -------------------------------------------------------------------
+# NSG — app subnet (CKV2_AZURE_31: all subnets must have an NSG)
+# App Service VNet Integration uses this subnet for outbound traffic only.
+# No inbound rules needed — inbound to App Service is via App Gateway.
+# -------------------------------------------------------------------
+
+resource "azurerm_network_security_group" "app" {
+  name                = "nsg-app-${var.name_prefix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = var.tags
+
+  security_rule {
+    name                       = "deny-internet-inbound"
+    priority                   = 1000
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "app" {
+  subnet_id                 = azurerm_subnet.app.id
+  network_security_group_id = azurerm_network_security_group.app.id
+}
+
+# -------------------------------------------------------------------
+# NSG — data subnet (SQL Private Endpoint)
+# Private endpoints do not use NSG inbound rules, but an NSG must be
+# associated (CKV2_AZURE_31). Explicit deny from internet is defence-in-depth.
+# -------------------------------------------------------------------
+
+resource "azurerm_network_security_group" "data" {
+  name                = "nsg-data-${var.name_prefix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = var.tags
+
+  security_rule {
+    name                       = "allow-sql-from-app"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "1433"
+    source_address_prefix      = var.app_subnet_cidr
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "deny-internet-inbound"
+    priority                   = 1000
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "data" {
+  subnet_id                 = azurerm_subnet.data.id
+  network_security_group_id = azurerm_network_security_group.data.id
+}
+
+# -------------------------------------------------------------------
+# NSG — private endpoints subnet (Key Vault Private Endpoint)
+# Same rationale as data subnet above.
+# -------------------------------------------------------------------
+
+resource "azurerm_network_security_group" "pe" {
+  name                = "nsg-pe-${var.name_prefix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = var.tags
+
+  security_rule {
+    name                       = "allow-https-from-app"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = var.app_subnet_cidr
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "deny-internet-inbound"
+    priority                   = 1000
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "pe" {
+  subnet_id                 = azurerm_subnet.private_endpoints.id
+  network_security_group_id = azurerm_network_security_group.pe.id
+}
+
+# -------------------------------------------------------------------
 # Private DNS Zones
 # These make SQL and Key Vault hostnames resolve to private IPs
 # -------------------------------------------------------------------

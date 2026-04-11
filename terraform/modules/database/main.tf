@@ -45,6 +45,13 @@ resource "azurerm_mssql_server_security_alert_policy" "main" {
   retention_days          = 90
 }
 
+# CKV_AZURE_23 + CKV_AZURE_24: enable auditing with 90-day retention sent to Log Analytics
+resource "azurerm_mssql_server_extended_auditing_policy" "main" {
+  server_id              = azurerm_mssql_server.main.id
+  log_monitoring_enabled = true
+  retention_in_days      = 90
+}
+
 # Private Endpoint — gives SQL Server a private IP inside snet-data
 resource "azurerm_private_endpoint" "sql" {
   name                = "pe-sql-${var.name_prefix}"
