@@ -386,6 +386,52 @@ Triggered a completely fresh pipeline run (`git commit --allow-empty`), which ge
 
 ---
 
+## Issue #19 — Key Vault Resources Already Exist After Soft-Delete Recovery
+
+**When:** Terraform Apply (re-deploy after destroy — second attempt)
+**Error:**
+```
+Error: a resource with the ID "https://kv-netwrix-dev.vault.azure.net/certificates/appgw-tls-dev/..." already exists
+Error: a resource with the ID "https://kv-netwrix-dev.vault.azure.net/secrets/db-connection-string/..." already exists
+Error: a resource with the ID "https://kv-netwrix-dev.vault.azure.net/secrets/appinsights-connection-string/..." already exists
+```
+
+**Why it happened:**
+The Key Vault has `purge_protection_enabled = true` and soft-delete, so when the resource group was deleted, the KV entered **soft-deleted state** rather than being permanently destroyed. The Terraform provider (configured with `recover_soft_deleted_key_vaults = true`) automatically recovered the KV during the next apply — including all its existing **certificates** and **secrets**.
+
+The Terraform state was wiped (Issue #18 workaround), so state was empty. When Terraform tried to create the cert and secrets, they already existed inside the recovered KV → conflict error.
+
+**Why this only affected 3 resources:**
+The KV itself was handled transparently (provider auto-recovered it). Other resources (RG, VNet, subnets, SQL, App GW policy, App Insights, etc.) were recreated fresh because they don't have soft-delete. Only KV objects (certs/secrets/keys) survive deletion inside a recovered vault.
+
+**Fix:**
+1. Granted local user `Key Vault Secrets Officer` RBAC role on the KV (needed to read secrets during import):
+   ```bash
+   az role assignment create \
+     --role "Key Vault Secrets Officer" \
+     --assignee "<user-oid>" \
+     --scope "/subscriptions/.../resourceGroups/rg-netwrix-dev/providers/Microsoft.KeyVault/vaults/kv-netwrix-dev"
+   ```
+2. Imported the 3 conflicting resources into Terraform state:
+   ```bash
+   terraform import "module.key_vault.azurerm_key_vault_certificate.appgw_tls" \
+     "https://kv-netwrix-dev.vault.azure.net/certificates/appgw-tls-dev/<version>"
+
+   terraform import "module.key_vault.azurerm_key_vault_secret.db_connection_string" \
+     "https://kv-netwrix-dev.vault.azure.net/secrets/db-connection-string/<version>"
+
+   terraform import "module.key_vault.azurerm_key_vault_secret.appinsights_connection_string" \
+     "https://kv-netwrix-dev.vault.azure.net/secrets/appinsights-connection-string/<version>"
+   ```
+3. Triggered a fresh pipeline run → Terraform Apply sees the resources are already in state and skips creating them.
+
+**Note on RBAC for local terraform import:**
+The TF CLI uses your personal Azure CLI token. The Key Vault uses RBAC (`rbac_authorization_enabled = true`), and the pipeline's SP had the `Key Vault Certificates Officer` role — but the personal user account did not. Always check that your local user has KV data-plane RBAC before running imports against Key Vault resources.
+
+**Key lesson:** When re-deploying after a destroy, any Key Vault with `purge_protection_enabled = true` will be auto-recovered with all its contents intact. If the Terraform state was cleared between destroy and re-deploy, the KV objects (certs, secrets, keys) will conflict. The fix is always `terraform import` — bring the existing objects into state so Terraform adopts rather than recreates them.
+
+---
+
 ## Summary Table
 
 | # | Stage | Error | Root Cause | Fix |
@@ -409,3 +455,4 @@ Triggered a completely fresh pipeline run (`git commit --allow-empty`), which ge
 | 16 | Smoke Test | 404 | Zip nested publish/ folder | cd ./publish && zip -r ../app.zip . |
 | 17 | TF Apply | 403 on RG read | SP roles deleted with RG | Re-assigned at subscription scope |
 | 18 | TF Apply | Stale plan | State cleared between plan and apply | Fresh pipeline run |
+| 19 | TF Apply | KV resources already exist | KV soft-delete recovery restored cert+secrets; state was empty | terraform import for 3 KV objects |
