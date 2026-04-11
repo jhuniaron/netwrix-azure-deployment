@@ -14,8 +14,10 @@ resource "azurerm_linux_web_app" "main" {
   service_plan_id           = azurerm_service_plan.main.id
   virtual_network_subnet_id = var.app_subnet_id # All outbound traffic goes via the VNet
   https_only                = true
-  # CKV_AZURE_222: explicitly disable public direct access even though IP restriction already denies all
-  public_network_access_enabled = false
+  # public_network_access_enabled = true so the GitHub Actions runner can reach the SCM/OneDeploy
+  # endpoint for deployments. The main app is protected by ip_restriction_default_action=Deny
+  # (only App Gateway subnet is allowed). CKV_AZURE_222 skipped in pipeline with justification.
+  public_network_access_enabled = true
   tags                          = var.tags
 
   # System-assigned Managed Identity — Azure creates this automatically.

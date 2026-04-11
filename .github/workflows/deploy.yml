@@ -123,10 +123,12 @@ jobs:
           # CKV_AZURE_212 — Min 2 instances: dev environment; autoscale handles production load; min-1 is cost-intentional
           # CKV_AZURE_41:  Secret expiration — rotation managed operationally via Azure Key Vault rotation policy
           # CKV_AZURE_160: Port 80 in gateway NSG — required for App Gateway HTTP->HTTPS permanent redirect (WAF Prevention mode)
+          # CKV_AZURE_222: public_network_access=true needed for GitHub runner to reach SCM/OneDeploy;
+          #   main app is protected by ip_restriction_default_action=Deny (only App GW allowed)
           # CKV_AZURE_189/CKV_AZURE_109: KV requires public access + Allow ACL so GitHub-hosted
           #   runner can write secrets during deploy. Security: rbac_authorization_enabled=true
           #   + private endpoint for App Service access. Use self-hosted VNet runner to remove this.
-          skip_check: "CKV_AZURE_13,CKV_AZURE_225,CKV_AZURE_224,CKV_AZURE_229,CKV_AZURE_88,CKV_AZURE_17,CKV_AZURE_212,CKV_AZURE_41,CKV_AZURE_160,CKV_AZURE_189,CKV_AZURE_109"
+          skip_check: "CKV_AZURE_13,CKV_AZURE_225,CKV_AZURE_224,CKV_AZURE_229,CKV_AZURE_88,CKV_AZURE_17,CKV_AZURE_212,CKV_AZURE_41,CKV_AZURE_160,CKV_AZURE_189,CKV_AZURE_109,CKV_AZURE_222"
 
       - name: Upload Checkov SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
