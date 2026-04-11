@@ -319,13 +319,14 @@ jobs:
           package:  ${{ env.ARTIFACT_NAME }}
 
       # Smoke test — proves the app is actually serving requests after deployment.
-      # Retries handle the App Service warm-up period.
+      # Hits the App Gateway IP (not App Service directly) because ip_restriction blocks
+      # all traffic except from the App Gateway subnet.
       - name: Post-deploy smoke test
         run: |
-          APP_URL="https://${{ vars.AZURE_WEBAPP_HOSTNAME }}"
-          echo "Smoke testing ${APP_URL}/health ..."
+          APP_URL="https://${{ vars.AZURE_APPGW_IP }}/health"
+          echo "Smoke testing ${APP_URL} ..."
           for i in $(seq 1 5); do
-            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "${APP_URL}/health")
+            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "${APP_URL}")
             if [ "$STATUS" = "200" ]; then
               echo "Health check passed (HTTP $STATUS)"
               exit 0
