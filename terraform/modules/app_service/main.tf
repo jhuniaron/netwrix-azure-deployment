@@ -33,6 +33,8 @@ resource "azurerm_linux_web_app" "main" {
     # Required when health_check_path is set — App Gateway removes instances
     # from the pool after 10 minutes of consecutive health check failures
     health_check_eviction_time_in_min = 10
+    # Force all outbound traffic through the VNet integration subnet (replaces WEBSITE_VNET_ROUTE_ALL app_setting in azurerm v4+)
+    vnet_route_all_enabled = true
 
     application_stack {
       dotnet_version = "10.0"
@@ -57,9 +59,6 @@ resource "azurerm_linux_web_app" "main" {
     "ConnectionStrings__DefaultConnection"  = "@Microsoft.KeyVault(SecretUri=${var.db_connstring_secret_uri})"
 
     "ASPNETCORE_ENVIRONMENT" = var.environment
-
-    # Force all outbound traffic through the VNet integration subnet
-    "WEBSITE_VNET_ROUTE_ALL" = "1"
   }
 
   logs {
