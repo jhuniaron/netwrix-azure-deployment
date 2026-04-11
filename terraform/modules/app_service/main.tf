@@ -29,7 +29,10 @@ resource "azurerm_linux_web_app" "main" {
     http2_enabled       = true
     ftps_state          = "Disabled"      # Only git/zip deploy via HTTPS
     minimum_tls_version = "1.2"
-    health_check_path   = "/health"
+    health_check_path                  = "/health"
+    # Required when health_check_path is set — App Gateway removes instances
+    # from the pool after 10 minutes of consecutive health check failures
+    health_check_eviction_time_in_min  = 10
 
     application_stack {
       dotnet_version = "10.0"
