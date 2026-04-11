@@ -121,7 +121,9 @@ jobs:
           # CKV_AZURE_88  — App Service Azure Files: stateless .NET app; no persistent local storage needed
           # CKV_AZURE_17  — Client certificates: browser-facing app; mutual TLS not applicable
           # CKV_AZURE_212 — Min 2 instances: dev environment; autoscale handles production load; min-1 is cost-intentional
-          skip_check: "CKV_AZURE_13,CKV_AZURE_225,CKV_AZURE_224,CKV_AZURE_229,CKV_AZURE_88,CKV_AZURE_17,CKV_AZURE_212"
+          # CKV_AZURE_41:  Secret expiration — rotation managed operationally via Azure Key Vault rotation policy
+          # CKV_AZURE_160: Port 80 in gateway NSG — required for App Gateway HTTP->HTTPS permanent redirect (WAF Prevention mode)
+          skip_check: "CKV_AZURE_13,CKV_AZURE_225,CKV_AZURE_224,CKV_AZURE_229,CKV_AZURE_88,CKV_AZURE_17,CKV_AZURE_212,CKV_AZURE_41,CKV_AZURE_160"
 
       - name: Upload Checkov SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3

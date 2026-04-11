@@ -80,10 +80,15 @@ resource "azurerm_application_gateway" "main" {
     tier = "WAF_v2"
   }
 
-  # CKV_AZURE_218: enforce TLS 1.2+ on all HTTPS listeners
+  # CKV_AZURE_218: Custom policy so Checkov can statically verify min_protocol_version = TLSv1_2
   ssl_policy {
-    policy_type = "Predefined"
-    policy_name = "AppGwSslPolicy20220101"
+    policy_type          = "Custom"
+    min_protocol_version = "TLSv1_2"
+    cipher_suites = [
+      "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+    ]
   }
 
   # WAF_v2 autoscales capacity units — no manual sizing needed

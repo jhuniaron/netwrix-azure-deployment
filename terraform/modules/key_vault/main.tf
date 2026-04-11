@@ -42,6 +42,7 @@ resource "azurerm_key_vault_secret" "db_connection_string" {
   name         = "db-connection-string"
   value        = var.db_connection_string
   key_vault_id = azurerm_key_vault.main.id
+  content_type = "text/plain"  # CKV_AZURE_114: identifies secret type for auditing tooling
 
   depends_on = [azurerm_role_assignment.terraform_kv_officer]
 }
@@ -51,6 +52,7 @@ resource "azurerm_key_vault_secret" "appinsights_connection_string" {
   name         = "appinsights-connection-string"
   value        = var.appinsights_connection_string
   key_vault_id = azurerm_key_vault.main.id
+  content_type = "text/plain"  # CKV_AZURE_114: identifies secret type for auditing tooling
 
   depends_on = [azurerm_role_assignment.terraform_kv_officer]
 }
