@@ -16,7 +16,7 @@ resource "azurerm_web_application_firewall_policy" "main" {
 
   policy_settings {
     enabled                     = true
-    mode                        = "Prevention"  # Actively blocks; use Detection first if tuning is needed
+    mode                        = "Prevention" # Actively blocks; use Detection first if tuning is needed
     request_body_check          = true
     file_upload_limit_in_mb     = 100
     max_request_body_size_in_kb = 128
@@ -37,7 +37,7 @@ resource "azurerm_web_application_firewall_policy" "main" {
 
   # Custom rule: block requests from known vulnerability scanner tools
   custom_rules {
-    name      = "BlockKnownScanners"  # Azure WAF custom rule names: alphanumeric only, no hyphens
+    name      = "BlockKnownScanners" # Azure WAF custom rule names: alphanumeric only, no hyphens
     priority  = 1
     rule_type = "MatchRule"
     action    = "Block"

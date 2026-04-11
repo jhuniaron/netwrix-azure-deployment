@@ -8,9 +8,9 @@ resource "azurerm_key_vault" "main" {
   resource_group_name        = var.resource_group_name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "standard"
-  rbac_authorization_enabled = true   # Modern RBAC model — no legacy access policies
-  soft_delete_retention_days = 90     # Deleted secrets recoverable for 90 days
-  purge_protection_enabled   = true   # Prevents permanent deletion even by admins
+  rbac_authorization_enabled = true # Modern RBAC model — no legacy access policies
+  soft_delete_retention_days = 90   # Deleted secrets recoverable for 90 days
+  purge_protection_enabled   = true # Prevents permanent deletion even by admins
   # CKV_AZURE_189 skipped: public_network_access=true required so CI runner can write secrets
   # during terraform apply. Security is enforced by network_acls default=Deny + private endpoint.
   # A self-hosted VNet runner would remove this requirement in production.
@@ -18,8 +18,8 @@ resource "azurerm_key_vault" "main" {
   tags                          = var.tags
 
   network_acls {
-    default_action = "Allow"          # Allow public traffic so CI runner can write secrets
-    bypass         = "AzureServices"  # Allow Azure Monitor, Backup, Defender
+    default_action = "Allow"         # Allow public traffic so CI runner can write secrets
+    bypass         = "AzureServices" # Allow Azure Monitor, Backup, Defender
     ip_rules       = []
   }
 }
@@ -44,7 +44,7 @@ resource "azurerm_key_vault_secret" "db_connection_string" {
   name         = "db-connection-string"
   value        = var.db_connection_string
   key_vault_id = azurerm_key_vault.main.id
-  content_type = "text/plain"  # CKV_AZURE_114: identifies secret type for auditing tooling
+  content_type = "text/plain" # CKV_AZURE_114: identifies secret type for auditing tooling
 
   depends_on = [azurerm_role_assignment.terraform_kv_officer]
 }
@@ -54,7 +54,7 @@ resource "azurerm_key_vault_secret" "appinsights_connection_string" {
   name         = "appinsights-connection-string"
   value        = var.appinsights_connection_string
   key_vault_id = azurerm_key_vault.main.id
-  content_type = "text/plain"  # CKV_AZURE_114: identifies secret type for auditing tooling
+  content_type = "text/plain" # CKV_AZURE_114: identifies secret type for auditing tooling
 
   depends_on = [azurerm_role_assignment.terraform_kv_officer]
 }

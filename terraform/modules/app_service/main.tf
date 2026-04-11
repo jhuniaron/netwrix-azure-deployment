@@ -12,11 +12,11 @@ resource "azurerm_linux_web_app" "main" {
   location                  = var.location
   resource_group_name       = var.resource_group_name
   service_plan_id           = azurerm_service_plan.main.id
-  virtual_network_subnet_id    = var.app_subnet_id  # All outbound traffic goes via the VNet
-  https_only                   = true
+  virtual_network_subnet_id = var.app_subnet_id # All outbound traffic goes via the VNet
+  https_only                = true
   # CKV_AZURE_222: explicitly disable public direct access even though IP restriction already denies all
   public_network_access_enabled = false
-  tags                         = var.tags
+  tags                          = var.tags
 
   # System-assigned Managed Identity — Azure creates this automatically.
   # Used to authenticate to Key Vault and SQL without any password.
@@ -27,12 +27,12 @@ resource "azurerm_linux_web_app" "main" {
   site_config {
     always_on           = true
     http2_enabled       = true
-    ftps_state          = "Disabled"      # Only git/zip deploy via HTTPS
+    ftps_state          = "Disabled" # Only git/zip deploy via HTTPS
     minimum_tls_version = "1.2"
-    health_check_path                  = "/health"
+    health_check_path   = "/health"
     # Required when health_check_path is set — App Gateway removes instances
     # from the pool after 10 minutes of consecutive health check failures
-    health_check_eviction_time_in_min  = 10
+    health_check_eviction_time_in_min = 10
 
     application_stack {
       dotnet_version = "10.0"

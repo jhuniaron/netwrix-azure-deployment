@@ -21,15 +21,15 @@ resource "azurerm_mssql_server" "main" {
 }
 
 resource "azurerm_mssql_database" "main" {
-  name         = "sqldb-${var.name_prefix}"
-  server_id    = azurerm_mssql_server.main.id
+  name      = "sqldb-${var.name_prefix}"
+  server_id = azurerm_mssql_server.main.id
   collation = "SQL_Latin1_General_CP1_CI_AS"
-  sku_name  = "GP_S_Gen5_1"  # Serverless: auto-scales 0.5–4 vCores, auto-pauses when idle
+  sku_name  = "GP_S_Gen5_1" # Serverless: auto-scales 0.5–4 vCores, auto-pauses when idle
   # license_type removed — not supported by Serverless SKU (provider enforces at plan time)
-  max_size_gb  = 32
-  tags         = var.tags
+  max_size_gb = 32
+  tags        = var.tags
 
-  auto_pause_delay_in_minutes = 60  # Pause after 60 min idle to save cost
+  auto_pause_delay_in_minutes = 60 # Pause after 60 min idle to save cost
   min_capacity                = 0.5
 }
 
@@ -40,9 +40,9 @@ resource "azurerm_mssql_server_security_alert_policy" "main" {
   state               = "Enabled"
 
   # CKV_AZURE_26 + CKV_AZURE_27: send alerts to the ops email address AND account admins
-  email_addresses         = [var.alert_email]
-  email_account_admins    = true
-  retention_days          = 90
+  email_addresses      = [var.alert_email]
+  email_account_admins = true
+  retention_days       = 90
 }
 
 # CKV_AZURE_23 + CKV_AZURE_24: enable auditing with 90-day retention sent to Log Analytics
