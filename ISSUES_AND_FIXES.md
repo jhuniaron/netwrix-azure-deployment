@@ -490,3 +490,5 @@ Note the `azurerm_monitor_diagnostic_setting` import ID format uses `|` (pipe) a
 | 18 | TF Apply | Stale plan | State cleared between plan and apply | Fresh pipeline run |
 | 19 | TF Apply | KV resources already exist | KV soft-delete recovery restored cert+secrets; state was empty | terraform import for 3 KV objects |
 | 20 | TF Apply | Diag setting already exists | Partial apply created App GW diag setting before failing; not in state | terraform import for diagnostic setting |
+
+| 21 | Smoke Test | curl exit code 28 (timeout) | App Gateway got new public IP on redeploy; AZURE_APPGW_IP GitHub variable was stale (20.213.73.65 -> 20.92.246.30) | Updated GitHub variable via `gh variable set AZURE_APPGW_IP` |
