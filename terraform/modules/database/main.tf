@@ -23,9 +23,9 @@ resource "azurerm_mssql_server" "main" {
 resource "azurerm_mssql_database" "main" {
   name         = "sqldb-${var.name_prefix}"
   server_id    = azurerm_mssql_server.main.id
-  collation    = "SQL_Latin1_General_CP1_CI_AS"
-  license_type = "LicenseIncluded"
-  sku_name     = "GP_S_Gen5_1"  # Serverless: auto-scales 0.5–4 vCores, auto-pauses when idle
+  collation = "SQL_Latin1_General_CP1_CI_AS"
+  sku_name  = "GP_S_Gen5_1"  # Serverless: auto-scales 0.5–4 vCores, auto-pauses when idle
+  # license_type removed — not supported by Serverless SKU (provider enforces at plan time)
   max_size_gb  = 32
   tags         = var.tags
 

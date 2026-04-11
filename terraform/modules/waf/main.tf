@@ -37,7 +37,7 @@ resource "azurerm_web_application_firewall_policy" "main" {
 
   # Custom rule: block requests from known vulnerability scanner tools
   custom_rules {
-    name      = "block-known-scanners"
+    name      = "BlockKnownScanners"  # Azure WAF custom rule names: alphanumeric only, no hyphens
     priority  = 1
     rule_type = "MatchRule"
     action    = "Block"
