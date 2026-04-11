@@ -426,7 +426,13 @@ The KV itself was handled transparently (provider auto-recovered it). Other reso
 3. Triggered a fresh pipeline run → Terraform Apply sees the resources are already in state and skips creating them.
 
 **Note on RBAC for local terraform import:**
-The TF CLI uses your personal Azure CLI token. The Key Vault uses RBAC (`rbac_authorization_enabled = true`), and the pipeline's SP had the `Key Vault Certificates Officer` role — but the personal user account did not. Always check that your local user has KV data-plane RBAC before running imports against Key Vault resources.
+The TF CLI uses your personal Azure CLI token. The Key Vault uses RBAC (`rbac_authorization_enabled = true`). Two separate data-plane roles are required:
+- `Key Vault Secrets Officer` — to read/import secrets
+- `Key Vault Certificates Officer` — to read/import certificates
+
+The initial import attempt granted only `Key Vault Secrets Officer`. The certificate import (`azurerm_key_vault_certificate`) failed with `403 ForbiddenByRbac` on the **second attempt** because `Key Vault Certificates Officer` was not granted. After granting it and waiting ~60s for propagation, the cert import succeeded.
+
+Always grant **both** roles before running `terraform import` on a Key Vault that has both secrets and certificates.
 
 **Key lesson:** When re-deploying after a destroy, any Key Vault with `purge_protection_enabled = true` will be auto-recovered with all its contents intact. If the Terraform state was cleared between destroy and re-deploy, the KV objects (certs, secrets, keys) will conflict. The fix is always `terraform import` — bring the existing objects into state so Terraform adopts rather than recreates them.
 
