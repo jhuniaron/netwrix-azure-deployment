@@ -438,6 +438,33 @@ Always grant **both** roles before running `terraform import` on a Key Vault tha
 
 ---
 
+## Issue #20 — App Gateway Diagnostic Setting Already Exists After Partial Apply
+
+**When:** Terraform Apply (re-deploy — after partial apply failed mid-way on cert conflict)
+**Error:**
+```
+Error: a resource with the ID ".../applicationGateways/appgw-netwrix-dev|diag-appgw-netwrix-dev" already exists
+```
+
+**Why it happened:**
+The previous apply (run `24286485681`) failed on the KV certificate conflict (Issue #19 fix was incomplete — the cert import succeeded locally but the pipeline's state copy didn't reflect it yet). That apply was already well into apply — it had created the App Gateway and its diagnostic setting before it hit the cert error.
+
+When the next run's apply started fresh, it found `azurerm_monitor_diagnostic_setting.appgw` already in Azure but not in the local state snapshot used by the pipeline → "already exists" conflict.
+
+**Why the pattern keeps repeating:**
+Each partial apply failure creates resources in Azure that land in the remote state blob at that point in time. But when apply aborts mid-run, later resources get created without being recorded. The plan for the next run sees the gap and tries to create them again.
+
+**Fix:**
+```bash
+terraform import "module.monitoring.azurerm_monitor_diagnostic_setting.appgw" \
+  "/subscriptions/.../resourceGroups/rg-netwrix-dev/providers/Microsoft.Network/applicationGateways/appgw-netwrix-dev|diag-appgw-netwrix-dev"
+```
+Note the `azurerm_monitor_diagnostic_setting` import ID format uses `|` (pipe) as a separator between the target resource ID and the diagnostic setting name.
+
+**Key lesson:** Every partial apply leaves a "drift gap" — resources exist in Azure but not in state. Before retrying after any apply failure, run `terraform state list` and compare against `az resource list` in the resource group. Import anything that appears in Azure but not in state before the next pipeline run.
+
+---
+
 ## Summary Table
 
 | # | Stage | Error | Root Cause | Fix |
@@ -462,3 +489,4 @@ Always grant **both** roles before running `terraform import` on a Key Vault tha
 | 17 | TF Apply | 403 on RG read | SP roles deleted with RG | Re-assigned at subscription scope |
 | 18 | TF Apply | Stale plan | State cleared between plan and apply | Fresh pipeline run |
 | 19 | TF Apply | KV resources already exist | KV soft-delete recovery restored cert+secrets; state was empty | terraform import for 3 KV objects |
+| 20 | TF Apply | Diag setting already exists | Partial apply created App GW diag setting before failing; not in state | terraform import for diagnostic setting |
