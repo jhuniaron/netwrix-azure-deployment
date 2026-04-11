@@ -54,6 +54,7 @@ module "app_service" {
   location            = module.networking.location
   resource_group_name = module.networking.resource_group_name
   app_subnet_id       = module.networking.app_subnet_id
+  gateway_subnet_id   = module.networking.gateway_subnet_id
   gateway_subnet_cidr = module.networking.gateway_subnet_cidr
   sku_name            = var.app_service_sku
   environment         = var.environment

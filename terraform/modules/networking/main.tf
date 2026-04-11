@@ -22,6 +22,8 @@ resource "azurerm_subnet" "gateway" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.gateway_subnet_cidr]
+  # Service endpoint enables VNet-based inbound rule on App Service (avoids public-IP NAT from App GW)
+  service_endpoints = ["Microsoft.Web"]
 }
 
 # App Service outbound traffic routes through this subnet (VNet Integration)

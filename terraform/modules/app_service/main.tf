@@ -45,10 +45,10 @@ resource "azurerm_linux_web_app" "main" {
     # FIREWALL: Only the Application Gateway subnet can reach this app.
     # Any direct request to *.azurewebsites.net returns 403.
     ip_restriction {
-      name       = "allow-appgateway-only"
-      ip_address = var.gateway_subnet_cidr
-      action     = "Allow"
-      priority   = 100
+      name                      = "allow-appgateway-only"
+      virtual_network_subnet_id = var.gateway_subnet_id
+      action                    = "Allow"
+      priority                  = 100
     }
 
     ip_restriction_default_action = "Deny"

@@ -15,6 +15,11 @@ variable "app_subnet_id" {
   type        = string
 }
 
+variable "gateway_subnet_id" {
+  description = "Resource ID of the Application Gateway subnet — used for VNet-based inbound restriction"
+  type        = string
+}
+
 variable "gateway_subnet_cidr" {
   description = "CIDR of the Application Gateway subnet — only this is allowed inbound to the app"
   type        = string
