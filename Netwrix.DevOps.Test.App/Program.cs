@@ -11,3 +11,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 app.MapGet("/", () => "Netwrix DevOps Test App — Running on .NET 10 / Linux");
 
 app.Run();
+
+// Exposes Program class to the test project for WebApplicationFactory
+public partial class Program { }
